@@ -13,7 +13,7 @@
 
 #define PIN_COUNTER 34
 
-unsigned long period_get = 30000;
+unsigned long period_get = 1000;
 unsigned long period_post = 3000;
 unsigned long last_time_get = 0;
 unsigned long last_time_post = 0;
@@ -22,9 +22,15 @@ unsigned long last_time_post = 0;
 const char* ssid = "3bb";
 const char* password = "0844025188";
 
+typedef struct { 
+  char * id_staff ;
+  char * name_first;
+  char * name_last;
+  }employ_TYPE ; 
+
 void setup() {
     pinMode( PIN_COUNTER , INPUT );
-    attachInterrupt(digitalPinToInterrupt(PIN_COUNTER), countUp, FALLING );
+    //attachInterrupt(digitalPinToInterrupt(PIN_COUNTER), countUp, FALLING );
     Serial.begin(115200);
 
     Serial.println();
@@ -58,11 +64,31 @@ void loop() {
         char buff[100];
         if( millis() - last_time_get > period_get) 
         {
+            char * id_test = "0014084630";
             last_time_get = millis();
-            sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/mc.php?id_mc=02-01&count=%d&qty=55" , count);
+            sprintf( buff , "http://www.bunnam.com/projects/majorette_pp/update/rfid.php?id_rfid=%s" , id_test );
             Serial.println( buff );
-            msg = httpPOSTRequest(buff,"");         
-            Serial.println( msg );      
+            msg = httpGETRequest(buff);        
+
+            Serial.println( msg );
+  
+            StaticJsonDocument<128> doc;
+            DeserializationError error = deserializeJson(doc, msg);
+            if (error) 
+            {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println(" : ID is not found !");
+              return;
+            }
+            else
+            {
+                const char* id_staff = doc["id_staff"]; // "000002"
+                const char* name_first = doc["name_first"]; // "Thanasin"
+                const char* name_last = doc["name_last"]; // "Bunnam"
+                sprintf( buff , "ID : %s TIMESTAMP : %s VALUE : %s" , id_staff , name_first , name_last );
+                Serial.println( buff ) ;   
+            } 
         }
 
         if ( flag ) 
@@ -170,4 +196,9 @@ void FunttestNodeJS( void )
                 sprintf( buff , "ID : %d TIMESTAMP : %s VALUE : %d" , id , timestamp , value );
                 Serial.println( buff ) ;   
             }  
+}
+
+void queryByID_GetMethod( int * id , char * result) 
+{
+    char buff[50];
 }
