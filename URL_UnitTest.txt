@@ -1,0 +1,8 @@
+
+http://bunnam.com/projects/majorette_pp/update/touch.php?id_mc=02-01&id_rfid=0001609206
+
+http://bunnam.com/projects/majorette_pp/update/count.php?id_job=5639407&operation=545&id_machine=02-02&no_send=8&no_pulse1=1&no_pulse2=1&no_pulse3=1
+
+http://bunnam.com/projects/majorette_pp/update/quit.php?id_rfid=0001609206&id_job=5639407&operation=545&id_machine=02-02&no_send=8&no_pulse1=1&no_pulse2=1&no_pulse3=1
+
+http://bunnam.com/projects/majorette_pp/update/break.php?id_breakcard=0001609206&id_job=5639407&operation=545&id_machine=02-02
