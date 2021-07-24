@@ -143,11 +143,11 @@ void loop() {
 
 
 
-    //        if ( flag )
-    //        {
-    //            Serial.println( count );
-    //            flag = 0;
-    //        }
+            if ( flag )
+            {
+                Serial.println( count );
+                flag = 0;
+            }
 
 
   }
