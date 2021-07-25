@@ -42,6 +42,17 @@ typedef struct employ_touch {
   uint8_t flag_err ;
 } employ_touch_TYPE ;
 
+typedef struct machine_sync {
+  char * id_job ;
+  char * item_no ;
+  char* operation ;
+  char * op_name ;
+  char * qty_order ;
+  char * qty_comp ;
+  char * qty_open ;
+  short code ;
+}machine_sync_TYPE ;
+
 typedef struct date_t {
   char* date_;
   char* time_;
@@ -67,6 +78,7 @@ String msg;
 
 static employ_touch_TYPE dst;
 datetime_TYPE date_time;
+machine_sync_TYPE mc_sync;
 
 void setup() {
   pinMode( PIN_COUNTER , INPUT );
@@ -360,6 +372,15 @@ int query_Quit_Rs_GetMethod( char* id_rfid,char * id_job , char * operation , ch
     String msg = " ";
     char buff[300];
     sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/quit-rs.php?id_rfid=%s&id_job=%s&operation=%s&id_machine=%s&no_send=%d&no_pulse1=%d&no_pulse2=%d&no_pulse3=%d&id_rs=%d&qty_rs=%d" ,id_rfid,id_job,operation,id_machine,no_send,no_pulse1,no_pulse2,no_pulse3,id_rs,qty_rs );
+    Serial.println(buff);
+//    msg = httpGETRequest(buff);
+}
+
+int query_Sync_GetMethod( char * id_machine , machine_sync_TYPE * res ) 
+{
+    String msg = " ";
+    char buff[300];
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/sync.php?id_machine=%s" ,id_machine );
     Serial.println(buff);
 //    msg = httpGETRequest(buff);
 }
