@@ -159,7 +159,6 @@ void printList(struct break_count *node)
   
   while (node != NULL)
   {
-     temp = node;
 
      Serial.print( "Debug TEMP : " );
      Serial.println( temp->break_stop );
@@ -169,12 +168,6 @@ void printList(struct break_count *node)
      Serial.println(node->break_stop);
      Serial.println("---------------");
      node = node->bc_next;
-     
-     if( temp->bc_next != NULL ) 
-     {
-        node = NULL ;
-        free(temp);
-     }
     
   }
 }
