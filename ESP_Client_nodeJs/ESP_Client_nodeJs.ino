@@ -157,6 +157,12 @@ void setup() {
 
   
   //query_Count_GetMethod( "5639407","545","02-02",(int *)8,(int *)1,(int *)1,(int *)1 );
+
+  unsigned int time_break;
+  if( query_Break_GetMethod( "0001609206" , "5639407" , "545" , "02-02" , &time_break) == 0 ) 
+  {
+    Serial.println( time_break );
+  }
   
 }
 
@@ -349,13 +355,47 @@ int query_Count_GetMethod( char * id_job , char * operation , char * id_machine 
 //    msg = httpGETRequest(buff);
 }
 
-int query_Break_GetMethod( char * id_breakcard,char * id_job , char * operation , char * id_machine ) 
+int query_Break_GetMethod( char * id_breakcard,char * id_job , char * operation , char * id_machine , unsigned int * time_b ) 
 {
     String msg = " ";
     char buff[300];
     sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/break.php?id_breakcard=%s&id_job=%s&operation%s&id_machine=%s" ,id_breakcard,id_job,operation,id_machine );
     Serial.println(buff);
-//    msg = httpGETRequest(buff);
+    msg = httpGETRequest(buff);
+
+    if ( msg != "null" )
+    {
+    Serial.println( msg );
+    Serial.println( msg.length() );
+
+    DynamicJsonDocument  doc( msg.length() + 256 ) ;
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      Serial.println("Error Break!");
+//      result->flag_err = 0;
+      return -1;
+    }
+    else if(doc["code"] == "003")
+    {
+      Serial.print("CODE : ");
+      Serial.println((const char *)(doc["code"]));
+      return -3;
+    }
+    else
+    {
+      *time_b = strtoul(doc["time_break"], NULL, 10);
+      
+      return 0;
+    }
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
 }
 
 int query_Quit_GetMethod( char* id_rfid,char * id_job , char * operation , char * id_machine , int * no_send , int* no_pulse1 ,int* no_pulse2 , int* no_pulse3 , int * time_work ) 
@@ -382,7 +422,56 @@ int query_Sync_GetMethod( char * id_machine , machine_sync_TYPE * res )
     char buff[300];
     sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/sync.php?id_machine=%s" ,id_machine );
     Serial.println(buff);
-//    msg = httpGETRequest(buff);
+    
+    msg = httpGETRequest(buff);
+
+  if ( msg != "null" )
+  {
+    Serial.println( msg );
+    Serial.println( msg.length() );
+
+    DynamicJsonDocument  doc( msg.length() + 256 ) ;
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      Serial.println("Error Sync!");
+//      result->flag_err = 0;
+      return -1;
+    }
+    else if(doc["code"] == "NOOP")
+    {
+      Serial.print("CODE : ");
+      Serial.println((const char *)(doc["code"]));
+      return 1;
+    }
+    else if(doc["code"] == "005")
+    {
+      Serial.print("CODE : ");
+      Serial.println((const char *)(doc["code"]));
+      return -3;
+    }
+    else
+    {
+      res->id_job = strdup(doc["id_job"]); 
+      res->item_no = strdup(doc["item_no"]);
+      res->operation = strdup(doc["operation"]);
+      res->op_name = strdup(doc["op_name"]); 
+      res->qty_order = strdup(doc["qty_order"]);
+      res->qty_comp = strdup(doc["qty_comp"]);
+      res->qty_open = strdup(doc["qty_open"]); 
+
+      return 0;
+    }
+  }
+  else
+  {
+//    result->flag_err = 1;
+    Serial.println("Error!");
+    return -2;
+  }
+  
 }
 
 int queryDate_Time( datetime_TYPE * date )
