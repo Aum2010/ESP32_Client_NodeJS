@@ -7,9 +7,33 @@ int breakCounter;
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
+typedef struct {
+    unsigned int sec_ ;
+    unsigned int minute_ ;
+    unsigned int second_;
+  }hh_mm_ss_T;
+
+typedef enum 
+{ 
+    TOILET_BREAK, 
+    LUNCHTIME_BREAK,  
+} break_T ; 
+
+int enumtostring( break_T b ) 
+{
+   if( b == TOILET_BREAK ) 
+   {
+      return 1 ; 
+   }else if( b == LUNCHTIME_BREAK ) 
+   {
+      return 2 ;
+   }
+}
+
 struct break_count {
     int break_start;
     int break_stop;
+    break_T break_type;
     struct break_count * bc_next;
   } ;
 
@@ -66,7 +90,7 @@ void loop() {
           {
                if( memo == 50 ) //if stop break condition
                {
-                  push(&head, 0 , breakCounter );
+                  push(&head, 0 , breakCounter , LUNCHTIME_BREAK);
                } 
                
                memo = 49;
@@ -140,13 +164,14 @@ void loop() {
  
 }
 
-void push(struct break_count** head_ref, int start_b , int stop_b)
+void push(struct break_count** head_ref, int start_b , int stop_b , break_T break_type_)
 {
     /* allocate node */
     struct break_count* new_node =(struct break_count*) malloc(sizeof(break_count));
     /* put in the key  */
     new_node->break_start  = start_b;
     new_node->break_stop  = stop_b;
+    new_node->break_type = break_type_;
     /* link the old list off the new node */
     new_node->bc_next = (*head_ref);
     /* move the head to point to the new node */
@@ -155,17 +180,15 @@ void push(struct break_count** head_ref, int start_b , int stop_b)
 
 void printList(struct break_count *node)
 {
-  struct break_count *temp;
   
   while (node != NULL)
   {
-
-     Serial.print( "Debug TEMP : " );
-     Serial.println( temp->break_stop );
      
      Serial.print(node->break_start);
      Serial.print(" -> ");
-     Serial.println(node->break_stop);
+     Serial.print(node->break_stop);
+     Serial.print(" -> ");
+     Serial.print( node->break_type );
      Serial.println("---------------");
      node = node->bc_next;
     
