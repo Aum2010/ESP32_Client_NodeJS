@@ -51,6 +51,40 @@ void iscard() {
   interrupts();
 }
 
+String translate_state_mc( state_type state ) 
+{
+  switch( state ) 
+  {
+    case MC_STANDBY : return " STANDBY ! " ;
+    case MC_WORKING : return " WORKING ! " ;
+    case MC_BREAK : return " BREAK ! " ;  
+  } 
+}
+
+String translate_hh_mm_cc( int sec ) 
+{
+    int h, m, s;
+    String buff = "" ;
+
+    h = (sec/3600); 
+  
+    m = (sec -(3600*h))/60;
+  
+    s = (sec -(3600*h)-(m*60));
+
+    buff += ( h > 9 ) ? "" : "0"; 
+    buff += h ;
+    buff += ":" ;
+    buff += ( m > 9 ) ? "" : "0"; 
+    buff += m ;
+    buff += ":" ;
+    buff += ( s > 9 ) ? "" : "0"; 
+    buff += s ;
+
+    return buff;
+    
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -79,6 +113,12 @@ void loop() {
               noInterrupts();
               isCrad = 0
               interrupts();
+
+              Serial.println( "---------------------------" );
+              Serial.print( "| State : " );
+              Serial.print( translate_state_mc(state_machine) );
+              Serial.println( " |" );
+              Serial.println( "---------------------------" );
           
           if( state_machine == MC_WORKING ) 
             {
@@ -92,7 +132,7 @@ void loop() {
 
             else if (state_machine == MC_BREAK )
             {
-                Serial.println("----- Break Sure ? -----");
+                Serial.println("----- Cancel break sure ? -----");
                 Serial.println( " choice 1         : Yes " );
                 Serial.println( " choice otherwise : No " );
                 isWork = 1 ;
@@ -190,7 +230,9 @@ void loop() {
       
       workCounter++;
       Serial.print("Work : ");
-      Serial.println(workCounter);
+//      Serial.println(workCounter);
+      Serial.println(translate_hh_mm_cc(workCounter));
+      
  
     }
 
@@ -203,7 +245,8 @@ void loop() {
       
       breakCounter++;
       Serial.print("Break : ");
-      Serial.println(breakCounter);
+//      Serial.println(breakCounter);
+      Serial.println(translate_hh_mm_cc(breakCounter));
  
     }
 
