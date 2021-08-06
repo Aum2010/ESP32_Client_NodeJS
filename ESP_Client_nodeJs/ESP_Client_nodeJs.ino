@@ -124,23 +124,23 @@ void setup() {
   //query_Touch_GetMethod( "02-02" , "0001609206" , &dst );
 
 /* *Fail Case* */
-  if( query_Touch_GetMethod( "00-02" , "0001609206" , &dst ) == 0 )
-  {
-  Serial.println( dst.id_staff );
-  Serial.println( dst.name_first );
-  Serial.println( dst.name_last );
-  Serial.println( dst.role );
-  Serial.println( dst.id_task );
-  Serial.println( dst.id_job );
-  Serial.println( dst.operation );
-  Serial.println( dst.op_name );
-  Serial.println( dst.qty_order );
-  Serial.println( dst.qty_comp );
-  Serial.println( dst.qty_open );
-  }
+//  if( query_Touch_GetMethod( "00-02" , "0001609206" , &dst ) == 0 )
+//  {
+//  Serial.println( dst.id_staff );
+//  Serial.println( dst.name_first );
+//  Serial.println( dst.name_last );
+//  Serial.println( dst.role );
+//  Serial.println( dst.id_task );
+//  Serial.println( dst.id_job );
+//  Serial.println( dst.operation );
+//  Serial.println( dst.op_name );
+//  Serial.println( dst.qty_order );
+//  Serial.println( dst.qty_comp );
+//  Serial.println( dst.qty_open );
+//  }
 
 /* *Good Case* */
-    if( query_Touch_GetMethod( "02-02" , "0001609206" , &dst ) == 0 )
+    if( query_Touch_GetMethod( "02-01" , "0001609206" , &dst ) == 0 )
   {
   Serial.println( dst.id_staff );
   Serial.println( dst.name_first );
@@ -158,11 +158,17 @@ void setup() {
   
   //query_Count_GetMethod( "5639407","545","02-02",(int *)8,(int *)1,(int *)1,(int *)1 );
 
-  unsigned int time_break;
-  if( query_Break_GetMethod( "0001609206" , "5639407" , "545" , "02-02" , &time_break) == 0 ) 
-  {
-    Serial.println( time_break );
-  }
+//  unsigned int time_break;
+//  if( query_Break_GetMethod( "0001609206" , "5639407" , "545" , "02-02" , &time_break) == 0 ) 
+//  {
+//    Serial.println( time_break );
+//  }
+
+  query_Break_GetMethod( "0001609206" ,"5639407","500","02-01","1" );
+
+  query_Continue_GetMethod("02-01","0001609206");
+
+  query_Quit_GetMethod("0001609206" ,"5639407","500","02-01","4","300","0","0");
   
 }
 
@@ -355,41 +361,40 @@ int query_Count_GetMethod( char * id_job , char * operation , char * id_machine 
 //    msg = httpGETRequest(buff);
 }
 
-int query_Break_GetMethod( char * id_breakcard,char * id_job , char * operation , char * id_machine , unsigned int * time_b ) 
+int query_Continue_GetMethod( const char * id_mc , const char * id_rfid  ) 
 {
     String msg = " ";
     char buff[300];
-    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/break.php?id_breakcard=%s&id_job=%s&operation%s&id_machine=%s" ,id_breakcard,id_job,operation,id_machine );
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/continue_v2.php?id_mc=%s&id_rfid=%s" , id_mc , id_rfid);
     Serial.println(buff);
     msg = httpGETRequest(buff);
 
     if ( msg != "null" )
     {
-    Serial.println( msg );
-    Serial.println( msg.length() );
 
-    DynamicJsonDocument  doc( msg.length() + 256 ) ;
-    DeserializationError error = deserializeJson(doc, msg);
-    if (error)
-    {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.f_str());
-      Serial.println("Error Break!");
-//      result->flag_err = 0;
-      return -1;
-    }
-    else if(doc["code"] == "003")
-    {
-      Serial.print("CODE : ");
-      Serial.println((const char *)(doc["code"]));
-      return -3;
-    }
-    else
-    {
-      *time_b = strtoul(doc["time_break"], NULL, 10);
-      
-      return 0;
-    }
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+          DynamicJsonDocument  doc( msg.length() + 256 ) ;
+          DeserializationError error = deserializeJson(doc, msg);
+          if (error)
+          {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Continue!");
+              return -1;
+          }
+          if(doc["code"])
+          {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+          }
+          if( doc["total_break"] ) 
+          {
+            Serial.println((const char *)(doc["total_break"]));
+            return 0;
+          }
   }
   else
   {
@@ -398,13 +403,93 @@ int query_Break_GetMethod( char * id_breakcard,char * id_job , char * operation 
   }
 }
 
-int query_Quit_GetMethod( char* id_rfid,char * id_job , char * operation , char * id_machine , int * no_send , int* no_pulse1 ,int* no_pulse2 , int* no_pulse3 , int * time_work ) 
+int query_Break_GetMethod( char * id_rfid,char * id_job , char * operation , char * id_mc , char * break_code ) 
 {
     String msg = " ";
     char buff[300];
-    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/quit.php?id_rfid=%s&id_job=%s&operation=%s&id_machine=%s&no_send=%d&no_pulse1=%d&no_pulse2=%d&no_pulse3=%d" ,id_rfid,id_job,operation,id_machine,no_send,no_pulse1,no_pulse2,no_pulse3 );
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/break_v2.php?id_rfid=%s&id_job=%s&operation=%s&id_mc=%s&break_code=%s" ,id_rfid,id_job,operation,id_mc,break_code );
     Serial.println(buff);
-//    msg = httpGETRequest(buff);
+    msg = httpGETRequest(buff);
+
+    if ( msg != "null" )
+    {
+
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+
+      if( msg == "OK" ) 
+        {
+            return 0;
+        }
+        else
+        {
+           DynamicJsonDocument  doc( msg.length() + 256 ) ;
+           DeserializationError error = deserializeJson(doc, msg);
+            if (error)
+            {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Break!");
+              return -1;
+            }
+            if(doc["code"])
+            {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+            }
+         }
+      
+
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
+}
+
+int query_Quit_GetMethod( char* id_rfid,char * id_job , char * operation , char * id_machine , char  * no_send , char * no_pulse1 ,char * no_pulse2 , char * no_pulse3 ) 
+{
+    String msg = " ";
+    char buff[300];
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/quit_v2.php?id_rfid=%s&id_job=%s&operation=%s&id_mc=%s&no_send=%s&no_pulse1=%s&no_pulse2=%s&no_pulse3=%s" ,id_rfid,id_job,operation,id_machine,no_send,no_pulse1,no_pulse2,no_pulse3 );
+    Serial.println(buff);
+    msg = httpGETRequest(buff);
+
+     if ( msg != "null" )
+    {
+
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+          DynamicJsonDocument  doc( msg.length() + 256 ) ;
+          DeserializationError error = deserializeJson(doc, msg);
+          if (error)
+          {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Quit!");
+              return -1;
+          }
+          if(doc["code"])
+          {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+          }
+          if( doc["time_work"] ) 
+          {
+            Serial.println((const char *)(doc["time_work"]));
+            return 0;
+          }
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
 }
 
 int query_Quit_Rs_GetMethod( char* id_rfid,char * id_job , char * operation , char * id_machine , int * no_send , int* no_pulse1 ,int* no_pulse2 , int* no_pulse3 ,char * id_rs, int * qty_rs ,int * time_work ) 

@@ -1,3 +1,24 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include "string.h"
+
+typedef struct employ_touch {
+  char* id_staff ;
+  char* name_first ;
+  char* name_last ;
+  int role ;
+  char * id_task ;
+  char * id_job ;
+  char * item_no ;
+  char* operation ;
+  char * op_name ;
+  char * qty_order ;
+  char * qty_comp ;
+  char * qty_open ;
+  uint8_t flag_err ;
+} employ_touch_TYPE ;
 
 typedef enum {
 
@@ -18,6 +39,7 @@ typedef enum {
 
 state_type state_machine = MC_STANDBY ;
 break_type state_break ;
+employ_touch_TYPE dst;
 
 volatile bool interruptWork;
 volatile bool interruptBreak;
@@ -85,9 +107,23 @@ String translate_hh_mm_cc( int sec )
     
 }
 
+
+const char* ssid = "3bb";
+const char* password = "0844025188";
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+
+    WiFi.begin(ssid, password);
+    Serial.println("Connecting");
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
   
   timer = timerBegin(0, 80, true);
   timerDetachInterrupt(timer);
@@ -144,6 +180,21 @@ void loop() {
                timerAlarmWrite(timer, 1000000, true);
                timerAlarmEnable(timer);
                /* push DB_1 */
+                   if( query_Touch_GetMethod( "02-01" , "0001609206" , &dst ) == 0 )
+                    {
+                      Serial.println( dst.id_staff );
+                      Serial.println( dst.name_first );
+                      Serial.println( dst.name_last );
+                      Serial.println( dst.role );
+                      Serial.println( dst.id_task );
+                      Serial.println( dst.id_job );
+                      Serial.println( dst.operation );
+                      Serial.println( dst.op_name );
+                      Serial.println( dst.qty_order );
+                      Serial.println( dst.qty_comp );
+                      Serial.println( dst.qty_open );
+                    }
+               /* push DB_1 */     
                state_machine = MC_WORKING ;
             }        
       }
@@ -164,6 +215,9 @@ void loop() {
                   state_machine = MC_STANDBY ; 
                   Serial.println( "cutoff work" ); 
                   timerDetachInterrupt(timer);
+                  /* DB4 */
+                  query_Quit_GetMethod("0001609206" ,"5639407","500","02-01","4","300","0","0");
+                  /* DB4 */
                   workCounter = 0;
                   break ;
               
@@ -173,6 +227,9 @@ void loop() {
                    timerAlarmWrite(timer, 1000000, true);
                    timerAlarmEnable(timer);
                    state_machine = MC_BREAK ;
+                   /* DB3 */
+                   query_Break_GetMethod( "0001609206" ,"5639407","500","02-01","1" );
+                   /* DB3 */
                   Serial.println( "toilet" ); 
                   break ;
                   
@@ -182,6 +239,9 @@ void loop() {
                    timerAlarmWrite(timer, 1000000, true);
                    timerAlarmEnable(timer);
                   state_machine = MC_BREAK ;
+                  /* DB3 */
+                  query_Break_GetMethod( "0001609206" ,"5639407","500","02-01","2" );
+                  /* DB3 */
                   Serial.println( "lunch time" ); 
                   break ;
               
@@ -210,6 +270,9 @@ void loop() {
                     timerAlarmWrite(timer, 1000000, true);
                     timerAlarmEnable(timer);
                     state_machine = MC_WORKING ;
+                    /* DB3 */
+                    query_Continue_GetMethod("02-01","0001609206");
+                    /* DB3 */
                     breakCounter = 0;              
               break ;
               
@@ -251,4 +314,227 @@ void loop() {
     }
 
 
+}
+
+
+
+String httpGETRequest(const char* serverName) {
+  HTTPClient http;
+
+  // Your IP address with path or Domain name with URL path
+  http.begin(serverName);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  // Send HTTP POST request
+  int httpResponseCode = http.GET();
+
+  String payload = "--";
+
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    payload = http.getString();
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  // Free resources
+  http.end();
+
+  return payload;
+}
+
+
+int query_Touch_GetMethod( const char * id_mc , const char * id_rfid , employ_touch_TYPE * result)
+{
+  String msg = " ";
+  char buff[300];
+  sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/touch.php?id_mc=%s&id_rfid=%s" , id_mc , id_rfid );
+  msg = httpGETRequest(buff);
+
+  if ( msg != "null" )
+  {
+    Serial.println( msg );
+    Serial.println( msg.length() );
+
+    DynamicJsonDocument  doc( msg.length() + 256 ) ;
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      Serial.println(" : ID is not found !");
+      result->flag_err = 0;
+      return -1;
+    }
+    else if(doc["code"])
+    {
+      Serial.print("CODE : ");
+      Serial.println((const char *)(doc["code"]));
+      return -3;
+    }
+    else
+    {
+
+      result->id_staff = strdup(doc["id_staff"]); // "000002"
+      result->name_first = strdup(doc["name_first"]); // "Thanasin"
+      result->name_last = strdup(doc["name_last"]); // "Bunnam"
+      result->role = doc["role"]; 
+      result->id_task = strdup(doc["id_task"]); // "8"
+      result->id_job = strdup(doc["id_job"]); 
+      result->item_no = strdup(doc["item_no"]);
+      result->operation = strdup(doc["operation"]);
+      result->op_name = strdup(doc["op_name"]); 
+      result->qty_order = strdup(doc["qty_order"]);
+      result->qty_comp = strdup(doc["qty_comp"]);
+      result->qty_open = strdup(doc["qty_open"]); 
+      result->flag_err = 0 ;
+      //sprintf( buff , "%s" , result->id_staff);
+      //Serial.println( buff ) ;
+      Serial.println( "--------------" ) ;
+      return 0;
+    }
+  }
+  else
+  {
+    result->flag_err = 1;
+    Serial.println("Error!");
+    return -2;
+  }
+}
+
+
+
+int query_Continue_GetMethod( const char * id_mc , const char * id_rfid  ) 
+{
+    String msg = " ";
+    char buff[300];
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/continue_v2.php?id_mc=%s&id_rfid=%s" , id_mc , id_rfid);
+    Serial.println(buff);
+    msg = httpGETRequest(buff);
+
+    if ( msg != "null" )
+    {
+
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+          DynamicJsonDocument  doc( msg.length() + 256 ) ;
+          DeserializationError error = deserializeJson(doc, msg);
+          if (error)
+          {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Continue!");
+              return -1;
+          }
+          if(doc["code"])
+          {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+          }
+          if( doc["total_break"] ) 
+          {
+            Serial.println((const char *)(doc["total_break"]));
+            return 0;
+          }
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
+}
+
+
+
+int query_Break_GetMethod( char * id_rfid,char * id_job , char * operation , char * id_mc , char * break_code ) 
+{
+    String msg = " ";
+    char buff[300];
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/break_v2.php?id_rfid=%s&id_job=%s&operation=%s&id_mc=%s&break_code=%s" ,id_rfid,id_job,operation,id_mc,break_code );
+    Serial.println(buff);
+    msg = httpGETRequest(buff);
+
+    if ( msg != "null" )
+    {
+
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+
+      if( msg == "OK" ) 
+        {
+            return 0;
+        }
+        else
+        {
+           DynamicJsonDocument  doc( msg.length() + 256 ) ;
+           DeserializationError error = deserializeJson(doc, msg);
+            if (error)
+            {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Break!");
+              return -1;
+            }
+            if(doc["code"])
+            {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+            }
+         }
+      
+
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
+}
+
+
+int query_Quit_GetMethod( char* id_rfid,char * id_job , char * operation , char * id_machine , char  * no_send , char * no_pulse1 ,char * no_pulse2 , char * no_pulse3 ) 
+{
+    String msg = " ";
+    char buff[300];
+    sprintf( buff , "http://bunnam.com/projects/majorette_pp/update/quit_v2.php?id_rfid=%s&id_job=%s&operation=%s&id_mc=%s&no_send=%s&no_pulse1=%s&no_pulse2=%s&no_pulse3=%s" ,id_rfid,id_job,operation,id_machine,no_send,no_pulse1,no_pulse2,no_pulse3 );
+    Serial.println(buff);
+    msg = httpGETRequest(buff);
+
+     if ( msg != "null" )
+    {
+
+          Serial.println( msg );
+          Serial.println( msg.length() );
+
+          DynamicJsonDocument  doc( msg.length() + 256 ) ;
+          DeserializationError error = deserializeJson(doc, msg);
+          if (error)
+          {
+              Serial.print(F("deserializeJson() failed: "));
+              Serial.println(error.f_str());
+              Serial.println("Error Quit!");
+              return -1;
+          }
+          if(doc["code"])
+          {
+              Serial.print("CODE : ");
+              Serial.println((const char *)(doc["code"]));
+              return -3;
+          }
+          if( doc["time_work"] ) 
+          {
+            Serial.println((const char *)(doc["time_work"]));
+            return 0;
+          }
+  }
+  else
+  {
+    Serial.println("Error!");
+    return -2;    
+  }
 }
